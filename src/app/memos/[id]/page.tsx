@@ -1,17 +1,18 @@
 import { Suspense } from "react";
 import { DetailShell, MemoDetailView } from "@/components/MemoDetailView";
-import { SavedMemoDetail } from "@/components/SavedMemoDetail";
-import { getMemo, memos } from "@/data/memos";
-
-export function generateStaticParams() {
-  return memos.map((m) => ({ id: m.id }));
-}
+import { getMemo } from "@/lib/memos";
 
 async function MemoDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const memo = getMemo(id);
-  // 기본 메모가 아니면 이 브라우저에 저장한 메모에서 찾는다
-  return memo ? <MemoDetailView memo={memo} /> : <SavedMemoDetail id={id} />;
+  const memo = await getMemo(id);
+  if (!memo) {
+    return (
+      <DetailShell>
+        <p className="text-body-md text-text-secondary">메모를 찾을 수 없어요</p>
+      </DetailShell>
+    );
+  }
+  return <MemoDetailView memo={memo} />;
 }
 
 export default function MemoDetailPage({

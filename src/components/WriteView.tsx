@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { categories, type Block, type Category, type Memo } from "@/data/memos";
-import { blocksToHtml, formatNow, htmlToBlocks, previewOf } from "@/lib/editor";
-import { addMemo, clearDraft, getDraft, setDraft, useHydrated } from "@/lib/memoStore";
+import { createMemo } from "@/app/actions";
+import { categories, type Block, type Category } from "@/data/memos";
+import { blocksToHtml, htmlToBlocks } from "@/lib/editor";
+import { clearDraft, getDraft, setDraft, useHydrated } from "@/lib/memoStore";
 import { ButtonFormat } from "./ButtonFormat";
 import { ButtonIcon } from "./ButtonIcon";
 import { ButtonPrimary } from "./ButtonPrimary";
@@ -38,6 +39,8 @@ function WriteForm() {
   const [blocks, setBlocks] = useState<Block[]>(draft?.blocks ?? []);
   const [initialHtml] = useState(() => blocksToHtml(draft?.blocks ?? []));
   const [fmt, setFmt] = useState({ bold: false, block: "", list: false });
+  const [error, setError] = useState("");
+  const saving = useRef(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -86,27 +89,29 @@ function WriteForm() {
     syncFmt();
   }
 
-  function save() {
+  async function save() {
+    if (saving.current) return;
     const t = title.trim();
     const body = htmlToBlocks(editorRef.current!);
     if (!t && body.length === 0) {
       titleRef.current?.focus();
       return;
     }
-    const memo: Memo = {
-      id: `u-${Date.now()}`,
-      title: t || "제목 없는 메모",
-      preview: previewOf(body),
-      date: "오늘",
-      datetime: formatNow(),
-      label: color,
-      category,
-      pinned: false,
-      body,
-    };
-    addMemo(memo);
-    clearDraft();
-    router.push("/");
+    saving.current = true;
+    setError("");
+    try {
+      const result = await createMemo({ title: t, category, label: color, body });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      clearDraft();
+      router.push("/");
+    } catch {
+      setError("저장하지 못했어요. 잠시 뒤 다시 해 주세요");
+    } finally {
+      saving.current = false;
+    }
   }
 
   const hasContent = title.trim() !== "" || blocks.length > 0;
@@ -190,7 +195,12 @@ function WriteForm() {
         </div>
       </main>
 
-      <div className="sticky bottom-space-34">
+      <div className="sticky bottom-space-34 flex flex-col gap-space-8">
+        {error && (
+          <p role="alert" className="px-space-8 text-caption-sm text-text-secondary">
+            {error}
+          </p>
+        )}
         <ButtonPrimary label="저장하기" onClick={save} />
       </div>
     </div>

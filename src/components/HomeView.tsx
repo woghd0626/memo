@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { categories, memos, type Category } from "@/data/memos";
-import { useSavedMemos } from "@/lib/memoStore";
+import { categories, type Category, type Memo } from "@/data/memos";
 import { ButtonPrimary } from "./ButtonPrimary";
 import { CardHeader } from "./CardHeader";
 import { Chip } from "./Chip";
@@ -10,10 +9,9 @@ import { MemoItem } from "./MemoItem";
 
 type Filter = "전체" | Category;
 
-export function HomeView() {
+export function HomeView({ memos, loading = false }: { memos: Memo[]; loading?: boolean }) {
   const [filter, setFilter] = useState<Filter>("전체");
-  const saved = useSavedMemos();
-  const shown = [...saved, ...memos].filter((m) => filter === "전체" || m.category === filter);
+  const shown = memos.filter((m) => filter === "전체" || m.category === filter);
   const pinned = shown.filter((m) => m.pinned);
   const recent = shown.filter((m) => !m.pinned);
 
@@ -25,7 +23,7 @@ export function HomeView() {
           <h1 className="text-heading-xl text-text-primary">
             오늘까지 메모를
             <br />
-            <span className="text-primary">128개</span> 남겼어요
+            <span className="text-primary">{loading ? "···" : `${memos.length}개`}</span> 남겼어요
           </h1>
         </header>
 
