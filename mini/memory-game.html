@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>과일 메모리 게임</title>
+<style>
+  :root {
+    --p1: #3b6cf6;
+    --p2: #f2685b;
+    --turn-color: var(--p1);
+    --bg: #f1f1f1;
+    --ink: #0a0a0a;
+    --muted: #6e6e6e;
+    --line: #cfcfcf;
+  }
+  body[data-turn="1"] { --turn-color: var(--p2); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 48px;
+  }
+  h1 { font-size: 32px; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 24px; }
+
+  /* 스코어보드 */
+  .board { display: flex; gap: 16px; margin-bottom: 12px; width: min(100%, 480px); }
+  .player {
+    flex: 1;
+    border: 2px solid var(--line);
+    border-radius: 20px;
+    padding: 12px 16px;
+    background: #fafafa;
+    text-align: center;
+    opacity: .55;
+    transition: all .25s;
+  }
+  .player .name { font-size: 14px; font-weight: 700; }
+  .player .score { font-size: 32px; font-weight: 900; line-height: 1.1; }
+  .player.p1 { --c: var(--p1); }
+  .player.p2 { --c: var(--p2); }
+  .player.p1 .name, .player.p1 .score { color: var(--p1); }
+  .player.p2 .name, .player.p2 .score { color: var(--p2); }
+  .player.active { opacity: 1; border-color: var(--c); box-shadow: 0 4px 16px color-mix(in srgb, var(--c) 30%, transparent); }
+
+  .status { height: 24px; margin-bottom: 20px; font-size: 15px; font-weight: 600; color: var(--turn-color); }
+
+  /* 카드 그리드 */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    width: min(100%, 480px);
+  }
+  .card { aspect-ratio: 1; perspective: 600px; cursor: pointer; transition: opacity .4s, transform .4s; }
+  .card .inner {
+    position: relative; width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transition: transform .4s;
+  }
+  .card.flipped .inner { transform: rotateY(180deg); }
+  .card.gone { opacity: 0; transform: scale(.6); pointer-events: none; }
+  .face {
+    position: absolute; inset: 0;
+    border-radius: 18px;
+    backface-visibility: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .back {
+    background: linear-gradient(160deg, #1b1b1b, #0a0a0a);
+    border: 3px solid transparent;
+    color: #fff; font-size: 28px; font-weight: 900;
+    transition: background .2s, border-color .2s;
+  }
+  /* hover: 현재 차례 플레이어의 색 */
+  .card:not(.flipped):hover .back { background: var(--turn-color); border-color: var(--turn-color); }
+  .front {
+    background: #fff;
+    border: 2px solid var(--line);
+    transform: rotateY(180deg);
+  }
+  .fruit { position: relative; font-size: clamp(34px, 11vw, 56px); line-height: 1; }
+  /* CSS 캐릭터 얼굴 */
+  .eye {
+    position: absolute; top: 46%; width: 7%; height: 11%;
+    background: #111; border-radius: 50%;
+  }
+  .eye.l { left: 30%; } .eye.r { right: 30%; }
+  .cheek {
+    position: absolute; top: 62%; width: 14%; height: 9%;
+    background: #ff8fa3; border-radius: 50%; opacity: .75;
+  }
+  .cheek.l { left: 16%; } .cheek.r { right: 16%; }
+  .mouth {
+    position: absolute; top: 63%; left: 44%; width: 12%; height: 7%;
+    border-bottom: 2px solid #111; border-radius: 0 0 50% 50%;
+  }
+
+  /* 결과 */
+  .result { margin-top: 28px; text-align: center; display: none; }
+  .result.show { display: block; }
+  .result h2 { font-size: 28px; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 16px; }
+  .btn {
+    background: var(--ink); color: #fff; border: 1px solid var(--ink);
+    font-size: 16px; font-weight: 600; padding: 14px 32px; border-radius: 999px;
+    cursor: pointer; transition: background .2s, color .2s;
+  }
+  .btn:hover { background: transparent; color: var(--ink); }
+  .hint { margin-top: 20px; font-size: 13px; color: var(--muted); }
+
+  /* 사운드 토글 */
+  .sound { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tog {
+    background: transparent; color: var(--ink); border: 1px solid var(--ink);
+    font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 999px;
+    cursor: pointer; transition: background .2s, color .2s;
+  }
+  .tog[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .tog:hover { opacity: .8; }
+</style>
+</head>
+<body data-turn="0">
+  <h1>Fruit Memory</h1>
+
+  <div class="sound">
+    <button class="tog" id="togBgm" aria-pressed="true">🎵 배경음 ON</button>
+    <button class="tog" id="togSfx" aria-pressed="true">🔔 효과음 ON</button>
+  </div>
+
+  <div class="board">
+    <div class="player p1 active" id="pl0"><div class="name">PLAYER 1</div><div class="score" id="sc0">0</div></div>
+    <div class="player p2" id="pl1"><div class="name">PLAYER 2</div><div class="score" id="sc1">0</div></div>
+  </div>
+  <div class="status" id="status"></div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="result" id="result">
+    <h2 id="resultText"></h2>
+    <button class="btn" id="restart">다시 하기</button>
+  </div>
+  <p class="hint">같은 과일 두 장을 맞추면 점수! 못 맞추면 차례가 넘어가요.</p>
+
+<script>
+  const FRUITS = ["🍎","🍌","🍇","🍓","🍊","🍉","🍑","🍍"];
+  const grid = document.getElementById("grid");
+  const statusEl = document.getElementById("status");
+  let current, scores, flipped, lock, matched;
+
+  /* ---------- 사운드 (Web Audio, 파일 없이 합성) ---------- */
+  const snd = { ctx: null, bgm: true, sfx: true, master: null, bgmGain: null, timer: null, step: 0, next: 0 };
+
+  function ensureCtx() {
+    if (!snd.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      snd.ctx = new AC();
+      snd.master = snd.ctx.createGain(); snd.master.gain.value = 0.9;
+      snd.master.connect(snd.ctx.destination);
+      snd.bgmGain = snd.ctx.createGain(); snd.bgmGain.gain.value = 0.07;
+      snd.bgmGain.connect(snd.master);
+    }
+    if (snd.ctx.state === "suspended") snd.ctx.resume();
+    return true;
+  }
+
+  function tone(freq, t, dur, type, vol, dest) {
+    const o = snd.ctx.createOscillator(), g = snd.ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(dest || snd.master);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  const sfx = {
+    flip()  { if (!snd.sfx || !ensureCtx()) return; const t = snd.ctx.currentTime; tone(520, t, 0.08, "triangle", 0.25); tone(780, t + 0.04, 0.08, "triangle", 0.2); },
+    match() { if (!snd.sfx || !ensureCtx()) return; const t = snd.ctx.currentTime; [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.08, 0.18, "sine", 0.3)); },
+    miss()  { if (!snd.sfx || !ensureCtx()) return; const t = snd.ctx.currentTime; tone(300, t, 0.18, "sawtooth", 0.12); tone(220, t + 0.14, 0.25, "sawtooth", 0.12); },
+    win()   { if (!snd.sfx || !ensureCtx()) return; const t = snd.ctx.currentTime; [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.12, 0.25, "triangle", 0.3)); }
+  };
+
+  // 밝은 펜타토닉 루프 (8분음표 단위, 0 = 쉼표)
+  const MELODY = [523,659,784,659, 880,784,659,0, 587,740,880,740, 784,659,587,0,
+                  523,659,784,659, 880,1047,880,784, 698,659,587,659, 523,0,0,0];
+  const BASS   = [262,0,0,0, 220,0,0,0, 196,0,0,0, 262,0,0,0];
+  const STEP = 0.22;
+
+  function schedule() {
+    while (snd.next < snd.ctx.currentTime + 0.3) {
+      const m = MELODY[snd.step % MELODY.length];
+      if (m) tone(m, snd.next, STEP * 1.6, "triangle", 0.6, snd.bgmGain);
+      const b = BASS[snd.step % BASS.length];
+      if (b) tone(b, snd.next, STEP * 3, "sine", 0.7, snd.bgmGain);
+      snd.next += STEP; snd.step++;
+    }
+  }
+  function startBgm() {
+    if (!snd.bgm || snd.timer || !ensureCtx()) return;
+    snd.next = snd.ctx.currentTime + 0.05;
+    snd.timer = setInterval(schedule, 80);
+  }
+  function stopBgm() { clearInterval(snd.timer); snd.timer = null; }
+
+  function setToggle(btn, on, label) {
+    btn.setAttribute("aria-pressed", on);
+    btn.textContent = label + (on ? " ON" : " OFF");
+  }
+  document.getElementById("togBgm").addEventListener("click", e => {
+    snd.bgm = !snd.bgm;
+    setToggle(e.currentTarget, snd.bgm, "🎵 배경음");
+    snd.bgm ? startBgm() : stopBgm();
+  });
+  document.getElementById("togSfx").addEventListener("click", e => {
+    snd.sfx = !snd.sfx;
+    setToggle(e.currentTarget, snd.sfx, "🔔 효과음");
+  });
+  // 브라우저 정책상 첫 사용자 입력 후에 재생 시작
+  document.addEventListener("pointerdown", () => startBgm(), { once: true });
+  document.addEventListener("visibilitychange", () => {
+    if (!snd.ctx) return;
+    document.hidden ? snd.ctx.suspend() : snd.ctx.resume();
+  });
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function render() {
+    document.body.dataset.turn = current;
+    [0, 1].forEach(i => {
+      document.getElementById("sc" + i).textContent = scores[i];
+      document.getElementById("pl" + i).classList.toggle("active", i === current);
+    });
+    statusEl.textContent = matched === FRUITS.length ? "" : `PLAYER ${current + 1}의 차례`;
+  }
+
+  function start() {
+    current = 0; scores = [0, 0]; flipped = []; lock = false; matched = 0;
+    document.getElementById("result").classList.remove("show");
+    grid.innerHTML = "";
+    shuffle([...FRUITS, ...FRUITS]).forEach(f => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.dataset.fruit = f;
+      card.innerHTML = `
+        <div class="inner">
+          <div class="face back">?</div>
+          <div class="face front">
+            <div class="fruit">${f}
+              <span class="eye l"></span><span class="eye r"></span>
+              <span class="cheek l"></span><span class="cheek r"></span>
+              <span class="mouth"></span>
+            </div>
+          </div>
+        </div>`;
+      card.addEventListener("click", () => onFlip(card));
+      grid.appendChild(card);
+    });
+    render();
+  }
+
+  function onFlip(card) {
+    if (lock || card.classList.contains("flipped") || card.classList.contains("gone")) return;
+    card.classList.add("flipped");
+    sfx.flip();
+    flipped.push(card);
+    if (flipped.length < 2) return;
+
+    lock = true;
+    const [a, b] = flipped;
+    if (a.dataset.fruit === b.dataset.fruit) {
+      setTimeout(() => {
+        a.classList.add("gone"); b.classList.add("gone");
+        sfx.match();
+        scores[current]++; matched++; flipped = []; lock = false;
+        render();
+        if (matched === FRUITS.length) finish();
+      }, 700);
+    } else {
+      setTimeout(() => {
+        a.classList.remove("flipped"); b.classList.remove("flipped");
+        sfx.miss();
+        flipped = []; current = 1 - current; lock = false;
+        render();
+      }, 900);
+    }
+  }
+
+  function finish() {
+    const [s1, s2] = scores;
+    document.getElementById("resultText").textContent =
+      s1 === s2 ? `무승부! (${s1} : ${s2})` : `PLAYER ${s1 > s2 ? 1 : 2} 승리! (${s1} : ${s2})`;
+    document.getElementById("result").classList.add("show");
+    setTimeout(sfx.win, 300);
+  }
+
+  document.getElementById("restart").addEventListener("click", start);
+  start();
+</script>
+</body>
+</html>

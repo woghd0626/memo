@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>메모 홈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --color-primary:#3182f6;
+  --surface-page:#f2f4f6;
+  --surface-card:#fff;
+  --text-primary:#191f28;
+  --text-secondary:#4e5968;
+  --text-muted:#8b95a1;
+  --text-on-primary:#fff;
+  --label-blue-soft:#e8f3ff;
+  --label-green-soft:#e3f8ec;
+  --label-orange-soft:#fff1e5;
+  --label-pink-soft:#ffeaf1;
+  --space-4:4px;--space-8:8px;--space-12:12px;--space-16:16px;--space-20:20px;
+  --space-24:24px;--space-34:34px;--space-64:64px;
+  --radius-sm:12px;--radius-md:16px;--radius-xl:24px;--radius-full:999px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#e9ecef;font-family:'Noto Sans KR',sans-serif;color:var(--text-primary);display:flex;justify-content:center}
+button{font:inherit;border:0;background:none;color:inherit;cursor:pointer;text-align:inherit}
+img{display:block}
+
+.screen{
+  width:100%;max-width:390px;min-height:100vh;
+  background:var(--surface-page);
+  display:flex;flex-direction:column;gap:var(--space-16);
+  padding:var(--space-64) var(--space-16) var(--space-34);
+}
+@media (min-height:844px){.screen{min-height:844px}}
+.main{flex:1;display:flex;flex-direction:column;gap:var(--space-16);min-height:0}
+
+.header{display:flex;flex-direction:column;gap:var(--space-8);padding:0 var(--space-8)}
+.date{font-weight:500;font-size:15px;line-height:22px;letter-spacing:-.2px;color:var(--text-muted)}
+.title{font-weight:700;font-size:28px;line-height:38px;letter-spacing:-.8px}
+.title em{font-style:normal;color:var(--color-primary)}
+
+.filter{display:flex;gap:var(--space-8);padding:0 var(--space-4);overflow-x:auto;scrollbar-width:none}
+.filter::-webkit-scrollbar{display:none}
+.chip{flex:none;height:36px;padding:0 var(--space-16);border-radius:var(--radius-full);background:var(--surface-card);
+  font-weight:700;font-size:15px;line-height:22px;letter-spacing:-.2px;color:var(--text-secondary);white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--color-primary);color:var(--text-on-primary)}
+
+.card{background:var(--surface-card);border-radius:var(--radius-xl);padding:var(--space-8) 0;display:flex;flex-direction:column}
+.card-header{height:40px;display:flex;align-items:center;gap:var(--space-4);padding:var(--space-12) var(--space-16) var(--space-4) var(--space-20)}
+.card-header h2{flex:1;min-width:0;font-weight:700;font-size:15px;line-height:22px;letter-spacing:-.2px}
+.card-header .pin{width:16px;height:16px;flex:none}
+.more{display:flex;align-items:center;gap:var(--space-4);font-weight:500;font-size:15px;line-height:22px;letter-spacing:-.2px;color:var(--text-muted);white-space:nowrap}
+.more img{width:16px;height:16px}
+
+.memo{display:flex;align-items:center;gap:var(--space-16);height:72px;padding:var(--space-12) var(--space-20);width:100%}
+.tile{width:44px;height:44px;flex:none;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center}
+.tile img{width:22px;height:22px}
+.tile.blue{background:var(--label-blue-soft)}
+.tile.green{background:var(--label-green-soft)}
+.tile.orange{background:var(--label-orange-soft)}
+.tile.pink{background:var(--label-pink-soft)}
+.content{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
+.memo-title{font-weight:700;font-size:17px;line-height:24px;letter-spacing:-.3px;color:var(--text-primary)}
+.memo-preview{font-weight:400;font-size:14px;line-height:20px;letter-spacing:-.1px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.memo-date{flex:none;font-weight:500;font-size:13px;line-height:18px;color:var(--text-muted);white-space:nowrap}
+
+.btn-primary{position:sticky;bottom:var(--space-34);height:56px;width:100%;display:flex;align-items:center;justify-content:center;gap:var(--space-8);
+  padding:0 var(--space-24);border-radius:var(--radius-md);background:var(--color-primary);color:var(--text-on-primary);
+  font-weight:700;font-size:17px;line-height:24px;letter-spacing:-.2px;text-align:center}
+.btn-primary img{width:20px;height:20px}
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="main">
+    <header class="header">
+      <p class="date">10월 30일 금요일</p>
+      <h1 class="title">오늘까지 메모를<br><em>128개</em> 남겼어요</h1>
+    </header>
+
+    <div class="filter" role="group" aria-label="분류">
+      <button class="chip" aria-pressed="true">전체</button>
+      <button class="chip" aria-pressed="false">업무</button>
+      <button class="chip" aria-pressed="false">개인</button>
+      <button class="chip" aria-pressed="false">아이디어</button>
+    </div>
+
+    <section class="card">
+      <div class="card-header">
+        <img class="pin" src="assets/icon-pin.svg" alt="">
+        <h2>고정한 메모</h2>
+      </div>
+      <button class="memo">
+        <span class="tile blue"><img src="assets/icon-note-blue.svg" alt=""></span>
+        <span class="content"><span class="memo-title">디자인 리뷰 회의록</span><span class="memo-preview">검수 기준과 다음 할 일 정리</span></span>
+        <span class="memo-date">오늘</span>
+      </button>
+      <button class="memo">
+        <span class="tile green"><img src="assets/icon-note-green.svg" alt=""></span>
+        <span class="content"><span class="memo-title">주말 등산 준비</span><span class="memo-preview">물 두 병, 간식, 바람막이 챙기기</span></span>
+        <span class="memo-date">어제</span>
+      </button>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>최근 메모</h2>
+        <button class="more">전체 보기<img src="assets/icon-chevron-right.svg" alt=""></button>
+      </div>
+      <button class="memo">
+        <span class="tile pink"><img src="assets/icon-note-pink.svg" alt=""></span>
+        <span class="content"><span class="memo-title">장보기 목록</span><span class="memo-preview">우유, 계란, 사과, 커피 원두</span></span>
+        <span class="memo-date">오늘</span>
+      </button>
+      <button class="memo">
+        <span class="tile orange"><img src="assets/icon-note-orange.svg" alt=""></span>
+        <span class="content"><span class="memo-title">앱 아이콘 아이디어</span><span class="memo-preview">메모지 모서리가 접힌 모양</span></span>
+        <span class="memo-date">오늘</span>
+      </button>
+      <button class="memo">
+        <span class="tile green"><img src="assets/icon-note-green.svg" alt=""></span>
+        <span class="content"><span class="memo-title">읽을 책</span><span class="memo-preview">디자인 시스템 책 두 권</span></span>
+        <span class="memo-date">어제</span>
+      </button>
+    </section>
+  </div>
+
+  <button class="btn-primary"><img src="assets/icon-plus.svg" alt="">새 메모 쓰기</button>
+</div>
+
+<script>
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',x===c));
+}));
+</script>
+</body>
+</html>
